@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+   <name>SLA Alert</name>
+   <key>slaalert</key>
+   <state>stable</state>
+   <description>
+      <short>
+         <lang name="en_US">Send webhook alerts to Google Spaces when SLA/OLA is about to expire</lang>
+         <lang name="es_ES">Envía alertas webhook a Google Spaces cuando el SLA/OLA está por vencer</lang>
+      </short>
+   </description>
+   <versions>
+      <version>
+         <num>1.0.0</num>
+         <compatibility>~11.0</compatibility>
+      </version>
+   </versions>
+   <authors>
+      <author>SOC Team - Linktic</author>
+   </authors>
+   <license>GPL v2+</license>
+   <homepage></homepage>
+</root>
