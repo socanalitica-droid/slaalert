@@ -40,6 +40,10 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
         $time        = $hours > 0 ? "{$hours}h {$mins}min" : "{$mins}min";
         $ticket_link = self::GLPI_BASE_URL . '/front/ticket.form.php?id=' . $ticket_id;
         $case_link   = $case_id !== '' ? self::SECOPS_BASE_URL . '/' . $case_id . '?filterOperator=And' : '';
+        // Remove the SecOps line entirely when case_id is not filled in the ticket
+        if ($case_link === '') {
+            $template = preg_replace('/\n[^\n]*\{case_link\}/', '', $template);
+        }
         return str_replace(
             ['{ticket_id}', '{ticket_name}', '{tiempo_restante}', '{tiempo_vencido}', '{case_id}', '{ticket_link}', '{case_link}'],
             [$ticket_id,    $ticket_name,    $time,               $time,              $case_id,    $ticket_link,    $case_link],
