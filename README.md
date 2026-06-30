@@ -62,6 +62,8 @@ slaalert/
 | `{tiempo_restante}` | Tiempo que falta para vencer |
 | `{tiempo_vencido}` | Tiempo transcurrido desde el vencimiento |
 | `{case_id}` | Case ID del ticket (campo del plugin Fields, contenedor "secop") |
+| `{ticket_link}` | Link directo al ticket en GLPI |
+| `{case_link}` | Link directo al caso en Google SecOps (Chronicle), usa `{case_id}` |
 
 ### Ejemplo de mensajes
 

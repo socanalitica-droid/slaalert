@@ -51,6 +51,8 @@ $sections = [
           &nbsp;<code class="bg-light px-1 rounded">{tiempo_restante}</code>
           &nbsp;<code class="bg-light px-1 rounded">{tiempo_vencido}</code>
           &nbsp;<code class="bg-light px-1 rounded">{case_id}</code>
+          &nbsp;<code class="bg-light px-1 rounded">{ticket_link}</code>
+          &nbsp;<code class="bg-light px-1 rounded">{case_link}</code>
         </div>
       </div>
     </div>

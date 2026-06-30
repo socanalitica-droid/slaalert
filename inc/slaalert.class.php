@@ -4,6 +4,9 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
 
     static $rightname = 'config';
 
+    const GLPI_BASE_URL   = 'https://glpi.soc.linktic.com';
+    const SECOPS_BASE_URL = 'https://linktic-soc.backstory.chronicle.security/cases';
+
     static function getTypeName($nb = 0) {
         return 'SLA Alert';
     }
@@ -32,12 +35,14 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
     }
 
     static function buildMessage($template, $ticket_id, $ticket_name, $minutes, $case_id = '') {
-        $hours = floor($minutes / 60);
-        $mins  = $minutes % 60;
-        $time  = $hours > 0 ? "{$hours}h {$mins}min" : "{$mins}min";
+        $hours       = floor($minutes / 60);
+        $mins        = $minutes % 60;
+        $time        = $hours > 0 ? "{$hours}h {$mins}min" : "{$mins}min";
+        $ticket_link = self::GLPI_BASE_URL . '/front/ticket.form.php?id=' . $ticket_id;
+        $case_link   = $case_id !== '' ? self::SECOPS_BASE_URL . '/' . $case_id . '?filterOperator=And' : '';
         return str_replace(
-            ['{ticket_id}', '{ticket_name}', '{tiempo_restante}', '{tiempo_vencido}', '{case_id}'],
-            [$ticket_id,    $ticket_name,    $time,               $time,              $case_id],
+            ['{ticket_id}', '{ticket_name}', '{tiempo_restante}', '{tiempo_vencido}', '{case_id}', '{ticket_link}', '{case_link}'],
+            [$ticket_id,    $ticket_name,    $time,               $time,              $case_id,    $ticket_link,    $case_link],
             $template
         );
     }
