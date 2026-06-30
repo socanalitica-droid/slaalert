@@ -96,7 +96,7 @@ function plugin_slaalert_install() {
         60,
         [
             'comment'   => 'Send webhook alerts when SLA/OLA is about to expire or has breached',
-            'mode'      => CronTask::MODE_INTERNAL,
+            'mode'      => CronTask::MODE_EXTERNAL,
             'allowmode' => 3,
             'state'     => CronTask::STATE_WAITING,
         ]
