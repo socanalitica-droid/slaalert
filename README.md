@@ -61,6 +61,7 @@ slaalert/
 | `{ticket_name}` | Título del ticket |
 | `{tiempo_restante}` | Tiempo que falta para vencer |
 | `{tiempo_vencido}` | Tiempo transcurrido desde el vencimiento |
+| `{case_id}` | Case ID del ticket (campo del plugin Fields, contenedor "secop") |
 
 ### Ejemplo de mensajes
 

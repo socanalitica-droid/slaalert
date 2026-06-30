@@ -31,15 +31,35 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
         return $max / 60; // seconds → minutes
     }
 
-    static function buildMessage($template, $ticket_id, $ticket_name, $minutes) {
+    static function buildMessage($template, $ticket_id, $ticket_name, $minutes, $case_id = '') {
         $hours = floor($minutes / 60);
         $mins  = $minutes % 60;
         $time  = $hours > 0 ? "{$hours}h {$mins}min" : "{$mins}min";
         return str_replace(
-            ['{ticket_id}', '{ticket_name}', '{tiempo_restante}', '{tiempo_vencido}'],
-            [$ticket_id,    $ticket_name,    $time,               $time],
+            ['{ticket_id}', '{ticket_name}', '{tiempo_restante}', '{tiempo_vencido}', '{case_id}'],
+            [$ticket_id,    $ticket_name,    $time,               $time,              $case_id],
             $template
         );
+    }
+
+    /**
+     * Case ID values come from the "Fields" plugin (glpi_plugin_fields_ticketsecops),
+     * not from slaalert's own tables — fetched in bulk to avoid one query per ticket.
+     */
+    static function getCaseIds() {
+        global $DB;
+        $case_ids = [];
+        if ($DB->tableExists('glpi_plugin_fields_ticketsecops')) {
+            $rows = $DB->request([
+                'SELECT' => ['items_id', 'caseidfield'],
+                'FROM'   => 'glpi_plugin_fields_ticketsecops',
+                'WHERE'  => ['itemtype' => 'Ticket'],
+            ]);
+            foreach ($rows as $row) {
+                $case_ids[$row['items_id']] = $row['caseidfield'];
+            }
+        }
+        return $case_ids;
     }
 
     static function sendWebhook($webhook_url, $message) {
@@ -110,12 +130,14 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
         // timing gaps between cron executions). Must be > cron period (5 min).
         $grace = 10;
 
-        $sent = 0;
+        $case_ids = self::getCaseIds();
+        $sent     = 0;
 
         foreach ($tickets as $ticket) {
-            $id   = $ticket['id'];
-            $name = $ticket['name'];
-            $url  = $config['webhook_url'];
+            $id      = $ticket['id'];
+            $name    = $ticket['name'];
+            $url     = $config['webhook_url'];
+            $case_id = $case_ids[$id] ?? '';
 
             // ── SLA TTO ──────────────────────────────────────────────────────
             if (!empty($ticket['time_to_own']) && !empty($ticket['slas_id_tto'])) {
@@ -125,7 +147,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 if ($config['sla_tto_active']) {
                     $threshold = self::getThresholdForSla($ticket['slas_id_tto'], 'glpi_slalevels', 'slas_id');
                     if ($threshold > 0 && $mins > -$grace && $mins <= $threshold && !self::alreadySent($id, 'SLA_TTO')) {
-                        $msg = self::buildMessage($config['sla_tto_message'], $id, $name, (int) max(0, $mins));
+                        $msg = self::buildMessage($config['sla_tto_message'], $id, $name, (int) max(0, $mins), $case_id);
                         if (self::sendWebhook($url, $msg)) {
                             self::markSent($id, 'SLA_TTO');
                             $sent++;
@@ -135,7 +157,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
 
                 // Breach: deadline already passed — send once
                 if ($config['sla_tto_breach_active'] && $mins < 0 && !self::alreadySent($id, 'SLA_TTO_B')) {
-                    $msg = self::buildMessage($config['sla_tto_breach_message'], $id, $name, (int) abs($mins));
+                    $msg = self::buildMessage($config['sla_tto_breach_message'], $id, $name, (int) abs($mins), $case_id);
                     if (self::sendWebhook($url, $msg)) {
                         self::markSent($id, 'SLA_TTO_B');
                         $sent++;
@@ -150,7 +172,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 if ($config['sla_ttr_active']) {
                     $threshold = self::getThresholdForSla($ticket['slas_id_ttr'], 'glpi_slalevels', 'slas_id');
                     if ($threshold > 0 && $mins > -$grace && $mins <= $threshold && !self::alreadySent($id, 'SLA_TTR')) {
-                        $msg = self::buildMessage($config['sla_ttr_message'], $id, $name, (int) max(0, $mins));
+                        $msg = self::buildMessage($config['sla_ttr_message'], $id, $name, (int) max(0, $mins), $case_id);
                         if (self::sendWebhook($url, $msg)) {
                             self::markSent($id, 'SLA_TTR');
                             $sent++;
@@ -159,7 +181,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 }
 
                 if ($config['sla_ttr_breach_active'] && $mins < 0 && !self::alreadySent($id, 'SLA_TTR_B')) {
-                    $msg = self::buildMessage($config['sla_ttr_breach_message'], $id, $name, (int) abs($mins));
+                    $msg = self::buildMessage($config['sla_ttr_breach_message'], $id, $name, (int) abs($mins), $case_id);
                     if (self::sendWebhook($url, $msg)) {
                         self::markSent($id, 'SLA_TTR_B');
                         $sent++;
@@ -174,7 +196,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 if ($config['ola_tto_active']) {
                     $threshold = self::getThresholdForSla($ticket['olas_id_tto'], 'glpi_olalevels', 'olas_id');
                     if ($threshold > 0 && $mins > -$grace && $mins <= $threshold && !self::alreadySent($id, 'OLA_TTO')) {
-                        $msg = self::buildMessage($config['ola_tto_message'], $id, $name, (int) max(0, $mins));
+                        $msg = self::buildMessage($config['ola_tto_message'], $id, $name, (int) max(0, $mins), $case_id);
                         if (self::sendWebhook($url, $msg)) {
                             self::markSent($id, 'OLA_TTO');
                             $sent++;
@@ -183,7 +205,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 }
 
                 if ($config['ola_tto_breach_active'] && $mins < 0 && !self::alreadySent($id, 'OLA_TTO_B')) {
-                    $msg = self::buildMessage($config['ola_tto_breach_message'], $id, $name, (int) abs($mins));
+                    $msg = self::buildMessage($config['ola_tto_breach_message'], $id, $name, (int) abs($mins), $case_id);
                     if (self::sendWebhook($url, $msg)) {
                         self::markSent($id, 'OLA_TTO_B');
                         $sent++;
@@ -198,7 +220,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 if ($config['ola_ttr_active']) {
                     $threshold = self::getThresholdForSla($ticket['olas_id_ttr'], 'glpi_olalevels', 'olas_id');
                     if ($threshold > 0 && $mins > -$grace && $mins <= $threshold && !self::alreadySent($id, 'OLA_TTR')) {
-                        $msg = self::buildMessage($config['ola_ttr_message'], $id, $name, (int) max(0, $mins));
+                        $msg = self::buildMessage($config['ola_ttr_message'], $id, $name, (int) max(0, $mins), $case_id);
                         if (self::sendWebhook($url, $msg)) {
                             self::markSent($id, 'OLA_TTR');
                             $sent++;
@@ -207,7 +229,7 @@ class PluginSlaalertSlaAlert extends CommonGLPI {
                 }
 
                 if ($config['ola_ttr_breach_active'] && $mins < 0 && !self::alreadySent($id, 'OLA_TTR_B')) {
-                    $msg = self::buildMessage($config['ola_ttr_breach_message'], $id, $name, (int) abs($mins));
+                    $msg = self::buildMessage($config['ola_ttr_breach_message'], $id, $name, (int) abs($mins), $case_id);
                     if (self::sendWebhook($url, $msg)) {
                         self::markSent($id, 'OLA_TTR_B');
                         $sent++;
